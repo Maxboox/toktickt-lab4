@@ -6,19 +6,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ============================================================
-// USER (remplace Requester)
+// USER
 // ============================================================
 model User {
   id                  Int      @id @default(autoincrement())
   name                String
   email               String   @unique
   passwordHash        String
-  role                Role     @default(REQUESTER)
+  role                String   @default("REQUESTER")
   isActive            Boolean  @default(true)
   mustChangePassword  Boolean  @default(true)
   createdAt           DateTime @default(now())
@@ -30,6 +30,7 @@ model User {
   attachments         Attachment[]
   publicComments      PublicComment[]
   internalNotes       InternalNote[]
+  actionsPerformed    ActionTaken[]    
 
   @@index([email])
   @@index([role])
@@ -91,9 +92,9 @@ model Ticket {
   // Champs
   summary              String
   description          String
-  requestedPriority    RequestedPriority @default(MEDIUM)
-  itPriority           ITPriority?
-  currentStatus        TicketStatus      @default(NEW)
+  requestedPriority    String           @default("MEDIUM")
+  itPriority           String?
+  currentStatus        String           @default("NEW")
   resolutionSummary    String?
 
   // Indication "Problem appears resolved" par le Requester
@@ -106,6 +107,7 @@ model Ticket {
   attachments     Attachment[]
   publicComments  PublicComment[]
   internalNotes   InternalNote[]
+  actionsTaken    ActionTaken[]    
 
   @@index([requesterId])
   @@index([ownerId])
@@ -180,35 +182,20 @@ model InternalNote {
 }
 
 // ============================================================
-// ENUMS
+// ACTION TAKEN
 // ============================================================
-enum Role {
-  REQUESTER
-  IT_STAFF
-  ADMINISTRATOR
-}
-
-enum RequestedPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum ITPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum TicketStatus {
-  NEW
-  OPEN
-  IN_PROGRESS
-  WAITING_FOR_REQUESTER
-  RESOLVED
-  CLOSED
-  REOPENED
-  CANCELLED
+model ActionTaken {
+  id                Int      @id @default(autoincrement())
+  ticketId          Int
+  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actionDate        DateTime @default(now())
+  description       String
+  result            String
+  performedById     Int
+  performedBy       User     @relation(fields: [performedById], references: [id])
+  followUpRequired  Boolean  @default(false)
+  followUpNote      String?
+  attachmentNotes   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
